@@ -1,0 +1,77 @@
+<?php
+// convert login page to PHP to show server-side errors and post to auth.php
+session_start();
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+?>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b3d91" />
+  <title>SISTEM PRESENSI DOSEN AAU — Login</title>
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="page-login">
+  <a class="skip-link" href="#main">Lewati ke konten</a>
+  <header class="site-header" role="banner">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <!-- Placeholder Air Force symbol (SVG) -->
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="#0b3d91" />
+          <path d="M20 34 L32 12 L44 34 L32 28 L20 34 Z" fill="#fff" />
+        </svg>
+      </div>
+      <div class="title">SISTEM PRESENSI DOSEN AAU</div>
+    </div>
+    <nav class="header-actions" role="navigation" aria-label="Main navigation">
+      <button class="icon-btn menu-toggle" aria-label="Menu" aria-expanded="false" aria-controls="site-menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="2" fill="#ffffff" rx="1"/><rect x="3" y="11" width="18" height="2" fill="#ffffff" rx="1"/><rect x="3" y="16" width="18" height="2" fill="#ffffff" rx="1"/></svg>
+      </button>
+      <div id="site-menu" class="site-menu" hidden>
+        <a href="index.php">Home</a>
+        <a href="dashboard.php">Dashboard</a>
+        <button class="btn-logout">Logout</button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" class="container">
+    <section class="login-wrap">
+      <div class="login-card">
+        <h1 class="h2">Login Sistem</h1>
+
+        <?php if($error): ?>
+          <div class="presensi-box closed" role="alert" style="margin-bottom:10px"><?=htmlspecialchars($error)?></div>
+        <?php endif; ?>
+
+        <form id="loginForm" class="form-card" action="auth.php" method="post">
+          <label for="nidn">NIDN / Username</label>
+          <input id="nidn" name="nidn" type="text" placeholder="Masukkan NIDN" required>
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Password" required>
+
+          <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
+            <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="role" value="dosen" checked> Dosen</label>
+            <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="role" value="admin"> Admin</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary">MASUK</button>
+        </form>
+
+        <p class="muted">Sistem Presensi Dosen AAU — tampilan demo</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small>© AAU — Sistem Presensi Dosen</small>
+  </footer>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

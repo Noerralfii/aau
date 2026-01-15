@@ -1,0 +1,43 @@
+<?php
+// bootstrap init (sessions, security helpers)
+require __DIR__ . '/init.php';
+
+// Simple PDO connection helper — edit DB credentials as needed
+$DB_HOST = getenv('AAU_DB_HOST') ?: '127.0.0.1';
+$DB_NAME = getenv('AAU_DB_NAME') ?: 'aau_presensi';
+$DB_USER = getenv('AAU_DB_USER') ?: 'root';
+$DB_PASS = getenv('AAU_DB_PASS') ?: '';
+$DB_DSN = "mysql:host={$DB_HOST};dbname={$DB_NAME};charset=utf8mb4";
+
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
+];
+
+try {
+    $pdo = new PDO($DB_DSN, $DB_USER, $DB_PASS, $options);
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo "Database connection failed: " . htmlspecialchars($e->getMessage());
+    exit;
+}
+
+// helper to fetch single row
+if(!function_exists('fetch_one')){
+function fetch_one($pdo, $sql, $params = []){
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetch();
+}
+}
+
+// helper to fetch all
+if(!function_exists('fetch_all')){
+function fetch_all($pdo, $sql, $params = []){
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+}
+?>

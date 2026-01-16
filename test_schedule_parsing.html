@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test Schedule Parsing</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-case { margin: 20px 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .test-case h3 { margin: 0 0 10px 0; }
+    .result { padding: 10px; margin: 5px 0; border-radius: 3px; }
+    .pass { background: #e8f5e9; color: #2e7d32; }
+    .fail { background: #ffebee; color: #c62828; }
+  </style>
+</head>
+<body>
+  <h1>Test Schedule Parsing</h1>
+  <p>Buka console untuk lihat debug info. Setiap hari dan jam bisa di-test di sini.</p>
+  
+  <div class="test-case">
+    <h3>Test Case 1: Senin 08:00 - 09:30</h3>
+    <div id="test1" class="result"></div>
+  </div>
+
+  <div class="test-case">
+    <h3>Test Case 2: Jumat 12:00 - 15:30</h3>
+    <div id="test2" class="result"></div>
+  </div>
+
+  <div class="test-case">
+    <h3>Test Case 3: Selasa 10:00 - 11:30</h3>
+    <div id="test3" class="result"></div>
+  </div>
+
+  <div class="test-case">
+    <h3>Test dengan Schedule dari Database</h3>
+    <p>Schedule input: <input id="scheduleInput" type="text" value="Jumat, 12:00 - 15:30" style="width:300px"></p>
+    <p>Waktu test: <input id="dayInput" type="number" min="0" max="6" value="5" placeholder="Day 0-6"> 
+       <input id="hourInput" type="number" min="0" max="23" value="12" placeholder="Hour">
+       <input id="minInput" type="number" min="0" max="59" value="15" placeholder="Min">
+    </p>
+    <button onclick="testCustom()">Test</button>
+    <div id="customResult" class="result"></div>
+  </div>
+
+  <script>
+    const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+    function parseAndCheck(scheduleText, testDate) {
+      const currentDay = dayNames[testDate.getDay()];
+      const currentHour = testDate.getHours();
+      const currentMin = testDate.getMinutes();
+      
+      console.log(`\n=== Testing "${scheduleText}" with time ${currentDay} ${currentHour}:${String(currentMin).padStart(2,'0')} ===`);
+      
+      // Check if today matches schedule day
+      const scheduleUpper = scheduleText.toUpperCase();
+      const currentDayUpper = currentDay.toUpperCase();
+      if(!scheduleUpper.includes(currentDayUpper)){
+        console.log(`Day mismatch: "${currentDay}" not in "${scheduleText}"`);
+        return false;
+      }
+      console.log(`✓ Day matches: "${currentDay}"`);
+
+      // Extract time range from schedule
+      const timeMatch = scheduleText.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+      if(!timeMatch){
+        console.log(`✗ Time range not found in schedule`);
+        return false;
+      }
+      console.log(`✓ Time pattern found: "${timeMatch[0]}"`);
+
+      const startHour = parseInt(timeMatch[1], 10);
+      const startMin = parseInt(timeMatch[2], 10);
+      const endHour = parseInt(timeMatch[3], 10);
+      const endMin = parseInt(timeMatch[4], 10);
+
+      console.log(`  Start: ${String(startHour).padStart(2,'0')}:${String(startMin).padStart(2,'0')}`);
+      console.log(`  End:   ${String(endHour).padStart(2,'0')}:${String(endMin).padStart(2,'0')}`);
+      console.log(`  Current: ${String(currentHour).padStart(2,'0')}:${String(currentMin).padStart(2,'0')}`);
+
+      // Convert to minutes for easier comparison
+      const currentTime = currentHour * 60 + currentMin;
+      const startTime = startHour * 60 + startMin;
+      const endTime = endHour * 60 + endMin;
+
+      const isWithin = currentTime >= startTime && currentTime <= endTime;
+      console.log(`  ${currentTime} >= ${startTime} && ${currentTime} <= ${endTime} => ${isWithin}`);
+      
+      return isWithin;
+    }
+
+    // Test 1: Senin 08:00-09:30 (should pass if today is Senin at 08:00-09:30)
+    const test1Date = new Date();
+    test1Date.setDate(test1Date.getDate() - (test1Date.getDay() - 1 + 7) % 7); // Set to Monday
+    test1Date.setHours(8, 15, 0, 0);
+    const result1 = parseAndCheck('Senin, 08:00 - 09:30', test1Date);
+    document.getElementById('test1').innerHTML = result1 ? 
+      `<strong class="pass">✓ PASS: Presensi dibuka pada Senin 08:15</strong>` : 
+      `<strong class="fail">✗ FAIL: Seharusnya presensi dibuka</strong>`;
+
+    // Test 2: Jumat 12:00-15:30 (should pass if today is Jumat at 12:00-15:30)
+    const test2Date = new Date();
+    test2Date.setDate(test2Date.getDate() - (test2Date.getDay() - 5 + 7) % 7); // Set to Friday
+    test2Date.setHours(12, 15, 0, 0);
+    const result2 = parseAndCheck('Jumat, 12:00 - 15:30', test2Date);
+    document.getElementById('test2').innerHTML = result2 ? 
+      `<strong class="pass">✓ PASS: Presensi dibuka pada Jumat 12:15</strong>` : 
+      `<strong class="fail">✗ FAIL: Seharusnya presensi dibuka</strong>`;
+
+    // Test 3: Selasa 10:00-11:30
+    const test3Date = new Date();
+    test3Date.setDate(test3Date.getDate() - (test3Date.getDay() - 2 + 7) % 7); // Set to Tuesday
+    test3Date.setHours(10, 30, 0, 0);
+    const result3 = parseAndCheck('Selasa, 10:00 - 11:30', test3Date);
+    document.getElementById('test3').innerHTML = result3 ? 
+      `<strong class="pass">✓ PASS: Presensi dibuka pada Selasa 10:30</strong>` : 
+      `<strong class="fail">✗ FAIL: Seharusnya presensi dibuka</strong>`;
+
+    function testCustom() {
+      const schedule = document.getElementById('scheduleInput').value;
+      const day = parseInt(document.getElementById('dayInput').value);
+      const hour = parseInt(document.getElementById('hourInput').value);
+      const min = parseInt(document.getElementById('minInput').value);
+      
+      const testDate = new Date();
+      testDate.setDate(testDate.getDate() - (testDate.getDay() - day + 7) % 7);
+      testDate.setHours(hour, min, 0, 0);
+      
+      const result = parseAndCheck(schedule, testDate);
+      document.getElementById('customResult').innerHTML = result ?
+        `<strong class="pass">✓ PASS: Presensi dibuka pada ${dayNames[day]} ${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}</strong>` :
+        `<strong class="fail">✗ FAIL: Presensi TIDAK dibuka pada ${dayNames[day]} ${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}</strong>`;
+    }
+  </script>
+</body>
+</html>

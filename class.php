@@ -71,12 +71,6 @@ $meName = $_SESSION['user_name'] ?? 'Tamu';
             <button id="saveBtn" class="btn" disabled>SIMPAN PRESENSI</button>
           </fieldset>
           <div class="note muted" id="scheduleNote">Presensi hanya dapat dilakukan pada jam jadwal mengajar</div>
-
-          <div class="time-tools" style="margin-top:8px;display:flex;gap:8px;align-items:center">
-            <label style="display:flex;gap:8px;align-items:center"><input id="simulateToggle" type="checkbox"> Mode Simulasi</label>
-            <input id="simulateTime" type="time" value="08:15" disabled aria-label="Waktu simulasi">
-            <small class="muted">(Gunakan untuk menguji jendela presensi)</small>
-          </div>
         </div>
       </div>
 

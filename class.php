@@ -46,7 +46,7 @@ $meName = $_SESSION['user_name'] ?? 'Tamu';
   </header>
 
   <main id="main" class="container">
-    <section class="class-detail">
+    <section class="class-detail" data-schedule="<?=htmlspecialchars($class['schedule'])?>">
       <h2>Kelas: <?=htmlspecialchars($class['code'])?></h2>
       <div class="info-grid">
         <div>

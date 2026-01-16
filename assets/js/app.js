@@ -160,97 +160,78 @@ document.addEventListener('DOMContentLoaded', function(){
   // scheduled window check (uses simulation when enabled)
   function isWithinPresensi(){
     let now = new Date();
-
-    // Extract schedule from page - look in the class detail section
     let scheduleText = '';
-    
-    // Strategy 1: Look for strong tag with "Jadwal" then get next sibling or child div
-    const strongElements = Array.from(document.querySelectorAll('strong'));
-    for(let strong of strongElements){
-      if(strong.textContent.includes('Jadwal')){
-        // Check if there's a sibling div
-        let sibling = strong.nextElementSibling;
-        while(sibling && sibling.tagName !== 'DIV'){
-          sibling = sibling.nextElementSibling;
-        }
-        if(sibling){
-          scheduleText = sibling.textContent?.trim() || '';
-          break;
-        }
-        // Check parent's next sibling
-        const parent = strong.parentElement;
-        if(parent){
-          const div = parent.querySelector('div');
-          if(div) scheduleText = div.textContent?.trim() || '';
-        }
-        if(scheduleText) break;
-      }
+
+    // Strategy 1: Get from data attribute (most reliable)
+    const classDetail = document.querySelector('.class-detail');
+    if(classDetail && classDetail.dataset.schedule){
+      scheduleText = classDetail.dataset.schedule?.trim() || '';
+      console.log('[PRESENSI] Got schedule from data-attribute:', scheduleText);
     }
     
-    // Strategy 2: Look in .info-grid with direct child selector
+    // Strategy 2: Parse from visible text in info-grid
     if(!scheduleText){
       const infoGrid = document.querySelector('.info-grid');
       if(infoGrid){
-        // Get all direct children divs
-        const children = infoGrid.children;
-        for(let child of children){
-          const strong = child.querySelector('strong');
-          if(strong && strong.textContent.includes('Jadwal')){
-            // Get the div that contains schedule value (last div in this section)
-            const divs = Array.from(child.querySelectorAll('div'));
-            if(divs.length > 0){
-              scheduleText = divs[divs.length - 1].textContent?.trim() || '';
+        const allText = infoGrid.innerText || '';
+        // Find "Jadwal Mengajar" section
+        const lines = allText.split('\n');
+        for(let i = 0; i < lines.length; i++){
+          if(lines[i].includes('Jadwal')){
+            // Next line should be the schedule
+            if(i + 1 < lines.length){
+              scheduleText = lines[i + 1]?.trim() || '';
+              console.log('[PRESENSI] Got schedule from visible text:', scheduleText);
+              break;
             }
-            break;
           }
         }
       }
     }
     
-    // Strategy 3: Brute force - look for schedule-like text anywhere
+    // If still not found, try brute force search
     if(!scheduleText){
-      const allText = Array.from(document.querySelectorAll('*'));
-      for(let el of allText){
-        const text = el.textContent?.trim() || '';
-        // Look for pattern: Day name, time - time
-        if(/^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),\s*\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}$/.test(text)){
-          scheduleText = text;
+      const allText = document.body.innerText;
+      const lines = allText.split('\n');
+      for(let line of lines){
+        line = line.trim();
+        if(/^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),\s*\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/.test(line)){
+          scheduleText = line;
+          console.log('[PRESENSI] Got schedule from brute force search:', scheduleText);
           break;
         }
       }
     }
     
-    // If no schedule found, deny presensi (safer than allowing all)
+    // If no schedule found, deny presensi
     if(!scheduleText){
-      console.warn('[PRESENSI] Schedule not found on page');
-      console.warn('[PRESENSI] Page HTML:', document.querySelector('.class-detail')?.innerHTML.substring(0, 500));
+      console.warn('[PRESENSI] ❌ Schedule not found on page');
       return false;
     }
 
     console.log('[PRESENSI] Found schedule:', scheduleText);
 
-    // Parse schedule: expected format "Hari, HH:MM - HH:MM"
-    // Examples: "Senin, 08:00 - 09:30" or "Jumat, 12:00 - 15:30"
+    // Parse schedule
     const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
     const currentDay = dayNames[now.getDay()];
     const currentHour = now.getHours();
     const currentMin = now.getMinutes();
     
-    console.log('[PRESENSI] Current day:', currentDay, 'Time:', `${currentHour}:${String(currentMin).padStart(2,'0')}`);
+    console.log('[PRESENSI] Current: ' + currentDay + ' ' + String(currentHour).padStart(2,'0') + ':' + String(currentMin).padStart(2,'0'));
     
-    // Check if today matches schedule day (case-insensitive)
+    // Check day match
     const scheduleUpper = scheduleText.toUpperCase();
     const currentDayUpper = currentDay.toUpperCase();
     if(!scheduleUpper.includes(currentDayUpper)){
-      console.log('[PRESENSI] Day mismatch: schedule has', scheduleUpper, 'but today is', currentDayUpper);
+      console.log('[PRESENSI] ❌ Day mismatch');
       return false;
     }
+    console.log('[PRESENSI] ✓ Day match: ' + currentDay);
 
-    // Extract time range from schedule
-    // Match patterns like "08:00 - 09:30" or "08:00-09:30" or "08:00– 09:30"
+    // Extract time range - handle formats: "HH:MM - HH:MM" or "HH:MM– HH:MM"
     const timeMatch = scheduleText.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
     if(!timeMatch){
-      console.warn('[PRESENSI] Time range not found in schedule:', scheduleText);
+      console.warn('[PRESENSI] ❌ Could not parse time from:', scheduleText);
       return false;
     }
 
@@ -259,27 +240,29 @@ document.addEventListener('DOMContentLoaded', function(){
     const endHour = parseInt(timeMatch[3], 10);
     const endMin = parseInt(timeMatch[4], 10);
 
-    console.log('[PRESENSI] Parsed times - Start:', `${startHour}:${String(startMin).padStart(2,'0')}`, 'End:', `${endHour}:${String(endMin).padStart(2,'0')}`);
+    console.log('[PRESENSI] Time window: ' + String(startHour).padStart(2,'0') + ':' + String(startMin).padStart(2,'0') + 
+                ' to ' + String(endHour).padStart(2,'0') + ':' + String(endMin).padStart(2,'0'));
 
-    // Validate parsed values
+    // Validate
     if(startHour < 0 || startHour > 23 || startMin < 0 || startMin > 59 || 
        endHour < 0 || endHour > 23 || endMin < 0 || endMin > 59){
-      console.warn('[PRESENSI] Invalid time values after parsing');
+      console.warn('[PRESENSI] ❌ Invalid time values');
       return false;
     }
 
-    // Convert to minutes for easier comparison
+    // Compare times in minutes
     const currentTime = currentHour * 60 + currentMin;
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
-
+    
     const isWithin = currentTime >= startTime && currentTime <= endTime;
-    console.log('[PRESENSI] Time check:', currentTime, '>=', startTime, '&&', currentTime, '<=', endTime, '=', isWithin);
+    
+    console.log('[PRESENSI] Time check: ' + currentTime + ' >= ' + startTime + ' && ' + currentTime + ' <= ' + endTime + ' = ' + isWithin);
     
     if(isWithin){
-      console.log('[PRESENSI] ✓ PRESENSI DIBUKA!');
+      console.log('[PRESENSI] ✅ PRESENSI DIBUKA!');
     } else {
-      console.log('[PRESENSI] ✗ Presensi ditutup - di luar jam jadwal');
+      console.log('[PRESENSI] ❌ Presensi ditutup (di luar jam)');
     }
     
     return isWithin;
@@ -598,19 +581,28 @@ document.addEventListener('DOMContentLoaded', function(){
   // Helper: get schedule info from page
   function getScheduleInfo(){
     let scheduleText = '';
+    
+    // Try data attribute first
+    const classDetail = document.querySelector('.class-detail');
+    if(classDetail?.dataset.schedule){
+      return classDetail.dataset.schedule?.trim() || '';
+    }
+    
+    // Fallback: parse from visible text
     const infoGrid = document.querySelector('.info-grid');
     if(infoGrid){
-      const divs = infoGrid.querySelectorAll('div');
-      for(let i = 0; i < divs.length; i++){
-        const label = divs[i].querySelector('strong');
-        const value = divs[i].querySelector('div');
-        if(label && label.textContent.includes('Jadwal') && value){
-          scheduleText = value.textContent?.trim() || '';
-          break;
+      const allText = infoGrid.innerText || '';
+      const lines = allText.split('\n');
+      for(let i = 0; i < lines.length; i++){
+        if(lines[i].includes('Jadwal')){
+          if(i + 1 < lines.length){
+            return lines[i + 1]?.trim() || 'jadwal yang ditentukan';
+          }
         }
       }
     }
-    return scheduleText || 'jadwal yang ditentukan';
+    
+    return 'jadwal yang ditentukan';
   }
 
   // Helper: generate error message based on schedule

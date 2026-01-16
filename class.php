@@ -70,7 +70,7 @@ $meName = $_SESSION['user_name'] ?? 'Tamu';
             <label><input type="radio" name="status" value="Tidak Hadir"> Tidak Hadir</label>
             <button id="saveBtn" class="btn" disabled>SIMPAN PRESENSI</button>
           </fieldset>
-          <div class="note muted">Presensi hanya dapat dilakukan pada <strong>08:00 – 09:30</strong></div>
+          <div class="note muted" id="scheduleNote">Presensi hanya dapat dilakukan pada jam jadwal mengajar</div>
 
           <div class="time-tools" style="margin-top:8px;display:flex;gap:8px;align-items:center">
             <label style="display:flex;gap:8px;align-items:center"><input id="simulateToggle" type="checkbox"> Mode Simulasi</label>

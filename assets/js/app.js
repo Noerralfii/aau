@@ -168,10 +168,50 @@ document.addEventListener('DOMContentLoaded', function(){
       now = new Date(); now.setHours(parseInt(parts[0],10), parseInt(parts[1],10), 0, 0);
     }
 
-    // Scheduled time: 08:00 - 09:30
-    const start = new Date(now); start.setHours(8,0,0,0);
-    const end   = new Date(now); end.setHours(9,30,0,0);
-    return now >= start && now <= end;
+    // Extract schedule from page
+    let scheduleText = '';
+    const scheduleEl = document.querySelector('.info-grid div:nth-child(2) div, [class*="schedule"]');
+    if(scheduleEl) scheduleText = scheduleEl.textContent?.trim() || '';
+    
+    // If no schedule found, fallback to default 08:00-09:30
+    if(!scheduleText){
+      const start = new Date(now); start.setHours(8,0,0,0);
+      const end   = new Date(now); end.setHours(9,30,0,0);
+      return now >= start && now <= end;
+    }
+
+    // Parse schedule: expected format "Hari, HH:MM - HH:MM"
+    // Examples: "Senin, 08:00 - 09:30" or "Jumat, 12:00 - 15:30"
+    const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const currentDay = dayNames[now.getDay()];
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+    
+    // Check if today matches schedule day
+    if(!scheduleText.toLowerCase().includes(currentDay.toLowerCase())){
+      return false;
+    }
+
+    // Extract time range from schedule
+    const timeMatch = scheduleText.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if(!timeMatch){
+      // Invalid format, use default
+      const start = new Date(now); start.setHours(8,0,0,0);
+      const end   = new Date(now); end.setHours(9,30,0,0);
+      return now >= start && now <= end;
+    }
+
+    const startHour = parseInt(timeMatch[1], 10);
+    const startMin = parseInt(timeMatch[2], 10);
+    const endHour = parseInt(timeMatch[3], 10);
+    const endMin = parseInt(timeMatch[4], 10);
+
+    // Convert to minutes for easier comparison
+    const currentTime = currentHour * 60 + currentMin;
+    const startTime = startHour * 60 + startMin;
+    const endTime = endHour * 60 + endMin;
+
+    return currentTime >= startTime && currentTime <= endTime;
   }
 
   // Persisted rekap data helper
@@ -484,6 +524,23 @@ document.addEventListener('DOMContentLoaded', function(){
     })();
   }
 
+  // Helper: get schedule info from page
+  function getScheduleInfo(){
+    let scheduleText = '';
+    const scheduleEl = document.querySelector('.info-grid div:nth-child(2) div, [class*="schedule"]');
+    if(scheduleEl) scheduleText = scheduleEl.textContent?.trim() || '';
+    return scheduleText || 'jadwal yang ditentukan';
+  }
+
+  // Helper: generate error message based on schedule
+  function getPresensiErrorMessage(){
+    const scheduleText = getScheduleInfo();
+    if(scheduleText.includes(':') && scheduleText.includes('-')){
+      return `Presensi Belum Dibuka — Presensi hanya dapat dilakukan pada ${scheduleText}`;
+    }
+    return 'Presensi Belum Dibuka — Presensi hanya dapat dilakukan pada jam jadwal mengajar';
+  }
+
   // wire simulate control
   const simulateToggle = document.getElementById('simulateToggle');
   const simulateTime = document.getElementById('simulateTime');
@@ -492,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // reevaluate presensi availability
       if(isWithinPresensi()){
         presensiStatus.classList.remove('closed'); presensiStatus.classList.add('open'); presensiStatus.textContent = 'Presensi dibuka — silakan pilih status dan simpan.'; saveBtn.disabled = false; saveBtn.classList.remove('button-disabled');
-      } else { presensiStatus.classList.remove('open'); presensiStatus.classList.add('closed'); presensiStatus.textContent = 'Presensi Belum Dibuka — Presensi hanya dapat dilakukan pada 08:00 – 09:30'; saveBtn.disabled = true; saveBtn.classList.add('button-disabled'); }
+      } else { presensiStatus.classList.remove('open'); presensiStatus.classList.add('closed'); presensiStatus.textContent = getPresensiErrorMessage(); saveBtn.disabled = true; saveBtn.classList.add('button-disabled'); }
     });
     simulateTime.addEventListener('change', function(){ if(simulateToggle.checked) simulateToggle.dispatchEvent(new Event('change')); });
   }
@@ -505,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function(){
       saveBtn.classList.remove('button-disabled');
     } else {
       presensiStatus.classList.add('closed');
-      presensiStatus.textContent = 'Presensi Belum Dibuka — Presensi hanya dapat dilakukan pada 08:00 – 09:30';
+      presensiStatus.textContent = getPresensiErrorMessage();
       saveBtn.disabled = true;
       saveBtn.classList.add('button-disabled');
     }

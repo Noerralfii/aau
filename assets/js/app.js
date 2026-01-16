@@ -1,5 +1,9 @@
 // Small UI-only behaviors for demo
+console.log('[APP] Script loaded');
+
 document.addEventListener('DOMContentLoaded', function(){
+  console.log('[APP] DOMContentLoaded event fired');
+  
   // Login form — redirect to dashboard (demo)
   const loginForm = document.getElementById('loginForm');
   if(loginForm){
@@ -133,6 +137,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const presensiForm = document.getElementById('presensiForm');
   const rekapBody = document.getElementById('rekapBody');
   const totalCountEl = document.getElementById('totalCount');
+  
+  console.log('[PRESENSI] Initialized - presensiStatus:', !!presensiStatus, 'saveBtn:', !!saveBtn, 'presensiForm:', !!presensiForm);
 
   function formatTime(date){
     return String(date.getHours()).padStart(2,'0')+ ':' + String(date.getMinutes()).padStart(2,'0');
@@ -615,17 +621,22 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   if(presensiStatus){
+    console.log('[PRESENSI] Checking presensi availability...');
     if(isWithinPresensi()){
+      console.log('[PRESENSI] ✅ Opening presensi form');
       presensiStatus.classList.add('open');
       presensiStatus.textContent = 'Presensi dibuka — silakan pilih status dan simpan.';
       saveBtn.disabled = false;
       saveBtn.classList.remove('button-disabled');
     } else {
+      console.log('[PRESENSI] ❌ Closing presensi form');
       presensiStatus.classList.add('closed');
       presensiStatus.textContent = getPresensiErrorMessage();
       saveBtn.disabled = true;
       saveBtn.classList.add('button-disabled');
     }
+  } else {
+    console.warn('[PRESENSI] presensiStatus element not found!');
   }
 
   if(presensiForm){
